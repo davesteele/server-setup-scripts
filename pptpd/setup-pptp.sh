@@ -2,13 +2,16 @@
 # setup-pptpd.sh
 #
 # This will request a CHAP password.
+# The iptables-persistent install may query - say 'y'
+#
 # Once complete, there are opportunities to tighten things up in
 # /etc/ppp/chap-secrets.
 #
 
 apt-get -y update
 apt-get -y install pptpd
-apt-get -y install netfilter-persistent
+apt-get -y install iptables-persistent
+apt-get -y install vim
 
 #set username and password
 if grep -q CONFIGURED /etc/ppp/chap-secrets ;
@@ -19,7 +22,7 @@ else
   read pw;
   echo "# CONFIGURED" >>/etc/ppp/chap-secrets;
   # Note that this set a password valid from and to all hosts
-  echo "* * $pw" >> /etc/ppp/chap-secrets;
+  echo "* * $pw *" >> /etc/ppp/chap-secrets;
 fi
 
 #set the pptpd address
@@ -40,37 +43,11 @@ else
   echo "ms-dns 8.8.4.4" >> /etc/ppp/pptpd-options
 fi
 
+echo net.ipv4.ip_forward=1 >/etc/sysctl.d/ip_forward.conf
 
-#config IPV4 forwarding
-if grep -q "net.ipv4.ip_forward=1" /etc/sysctl.conf ;
-then
-  echo 'IP forwarding configured already';
-else
-  echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
-fi
+/sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+iptables-save >/etc/iptables/rules.v4
 
-cat <<EOF >/usr/share/netfilter-persistent/plugins.d/mypptpd
-#!/bin/sh
-
-case "\$1" in
-  start)
-    /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-  ;;
-  flush)
-    /sbin/iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE || /bin/true
-  ;;
-  save)
-    echo
-  ;;
-  *)
-    echo "Usage: mypptpd.sh [start|flush|save]" >&2
-  ;;
-esac
-EOF
-
-chmod 755 /usr/share/netfilter-persistent/plugins.d/mypptpd
-
-sysctl -p
+sysctl -p /etc/sysctl.d/ip_forward.conf
 /etc/init.d/pptpd restart
-netfilter-persistent start
 
