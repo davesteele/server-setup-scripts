@@ -8,9 +8,12 @@
 # /etc/ppp/chap-secrets.
 #
 
+EXTINT="eth0"
+PPPBASE="ppp"
+MAXCON=5
+
 apt-get -y update
 apt-get -y install pptpd
-apt-get -y install iptables-persistent
 apt-get -y install vim
 
 #set username and password
@@ -44,10 +47,27 @@ else
 fi
 
 echo net.ipv4.ip_forward=1 >/etc/sysctl.d/ip_forward.conf
+sysctl -p /etc/sysctl.d/ip_forward.conf
 
-/sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+if ! /sbin/iptables -C INPUT -p tcp -i $EXTINT --dport 1723 -j ACCEPT ; then
+    /sbin/iptables -A INPUT -p tcp -i $EXTINT --dport 1723 -j ACCEPT ;
+fi
+
+if ! /sbin/iptables -C INPUT -p tcp -i $EXTINT -p 47 -j ACCEPT ; then
+    /sbin/iptables -A INPUT -p tcp -i $EXTINT -p 47 -j ACCEPT ;
+fi
+
+if ! /sbin/iptables -t nat -C POSTROUTING -o $EXTINT -j MASQUERADE ; then
+    /sbin/iptables -t nat -A POSTROUTING -o $EXTINT -j MASQUERADE ;
+fi
+
+for N in $(seq 0 $MAXCONN) ; do
+    if ! /sbin/iptables -C INPUT -i $PPPBASE$N -j ACCEPT ; then
+        /sbin/iptables -A INPUT -i $PPPBASE$N -j ACCEPT ;
+    fi
+done
+
 iptables-save >/etc/iptables/rules.v4
 
-sysctl -p /etc/sysctl.d/ip_forward.conf
 /etc/init.d/pptpd restart
 
