@@ -20,6 +20,10 @@ if ! /sbin/iptables -C INPUT -i lo -j ACCEPT; then
     /sbin/iptables -A INPUT -i lo -j ACCEPT;
 fi
 
+if ! /sbin/iptables -C INPUT -p icmp --icmp-type 8 -j ACCEPT ; then
+    /sbin/iptables -A INPUT -p icmp --icmp-type 8 -j ACCEPT
+fi
+
 if ! /sbin/iptables -C INPUT -i $EXTINT -m state --state ESTABLISHED,RELATED -j ACCEPT ; then
     /sbin/iptables -A INPUT -i $EXTINT -m state --state ESTABLISHED,RELATED -j ACCEPT
 fi
