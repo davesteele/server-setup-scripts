@@ -53,8 +53,8 @@ if ! /sbin/iptables -C INPUT -p tcp -i $EXTINT --dport 1723 -j ACCEPT ; then
     /sbin/iptables -A INPUT -p tcp -i $EXTINT --dport 1723 -j ACCEPT ;
 fi
 
-if ! /sbin/iptables -C INPUT -p tcp -i $EXTINT -p 47 -j ACCEPT ; then
-    /sbin/iptables -A INPUT -p tcp -i $EXTINT -p 47 -j ACCEPT ;
+if ! /sbin/iptables -C INPUT -p 47 -j ACCEPT ; then
+    /sbin/iptables -A INPUT -p 47 -j ACCEPT ;
 fi
 
 if ! /sbin/iptables -t nat -C POSTROUTING -o $EXTINT -j MASQUERADE ; then
