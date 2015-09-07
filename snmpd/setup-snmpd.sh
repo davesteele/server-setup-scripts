@@ -39,28 +39,17 @@ fi
 
 # By default, SNMP network parameters are only updated once every 3 seconds.
 # Change that to once every second. The change is transient.
-# TODO - a systemd version of this is needed.
 
 setcmd="snmpset -c $private -v 1 127.0.0.1 NET-SNMP-AGENT-MIB::nsCacheTimeout.1.3.6.1.2.1.2.2 i 1"
 
-if ! grep -q "$setcmd" /etc/rc.local ; then
-    sed -i "s/\(exit 0\)/$setcmd\n\1/" /etc/rc.local
+if ! grep -q "$setcmd" /etc/init.d/snmpd ; then
+    sed -i "s/\(log_progress_msg \" snmpd\"\)/\1\n$setcmd/" /etc/init.d/snmpd >/dev/null
 fi
-
-## Alternate method to override the 3 second update,
-## per https://www.fineconnection.com/how_to_set_the_net-snmp_agent_update_or_counter_refresh_interval/
-## (Doesn't work)
-#
-#overcmd=" override .1.3.6.1.4.1.8072.1.5.3.1.2.1.3.6.1.2.1.2.2 integer 1"
-#if ! grep -q "$overcmd" $confl ; then
-#    echo "$overcmd" >>$confl
-#fi
 
 # No firewall changes are needed for localhost access
 
 # make a stab at restarting the service
 service snmpd restart
-systemctl restart snmpd
 
 sleep 3
 
