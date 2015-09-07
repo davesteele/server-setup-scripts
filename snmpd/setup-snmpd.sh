@@ -2,7 +2,7 @@
 # setup-snmpd.sh
 #
 #
-# Set up snmpd daemonsshd on an alternate port.
+# Set up snmpd daemon
 #
 # This uses http://www.unixmen.com/cacti-monitor-linux-servers-using-snmp/
 # for guidance, yielding a read/write environment for SNMP V1 & 2.
