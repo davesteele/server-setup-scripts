@@ -1,0 +1,94 @@
+#!/bin/bash
+
+mnt=/tmp/mnt
+
+if [ $# -ne 2 ] ;
+then
+    echo "Usage: $0 <image file> <storage device>"
+    echo
+    echo "Copy an uncompressed Raspbian image to an SD card, resize the"
+    echo "main partition, and optionally set up a particular networking"
+    echo "environment"
+    exit 1
+fi
+
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+image=$1
+device=$2
+
+echo -n "Setup the raspbian image $image on $device? [y/n] - "
+
+read confirm
+if [ $confirm != 'y' ] ; then exit 0 ; fi
+
+echo "Unmounting partitions on $device"
+
+for part in `(df | grep $device | awk '{print $6}')`; do
+    echo "Unmounting $part"
+    umount $part
+done
+
+echo "Copying the Raspian image (this will take a while)"
+dd if=$image of=$device bs=40M
+echo "Copy done"
+
+partprobe $device
+
+for part in `(df | grep $device | awk '{print $6}')`; do
+    echo "Unmounting $part"
+    umount $part
+done
+
+echo "Getting information on the new device"
+partition=`echo -e p\nq\n | fdisk $device | grep $device | tail -1 | awk '{print $1}'`
+startsec=`echo -e p\nq\n | fdisk $device | grep $device | tail -1 | awk '{print $2}'`
+echo "The data partition $partition starts at $startsec"
+
+echo "resize2fs requires a fsck check"
+e2fsck -f $partition
+
+echo "Resize the main partition"
+echo -e "d\n2\nn\np\n2\n$startsec\n\nw\n" | fdisk $device
+
+echo "Resize the file system"
+resize2fs $partition
+
+echo -n "Set up networking (eth0 at 10.0.0.2/24, wlan via NetworkManager)? [y/n] - "
+
+read confirm
+if [ $confirm != 'y' ] ; then exit 0 ; fi
+
+mkdir -p $mnt
+
+mount $partition $mnt
+
+cat <<EOF > $mnt/etc/network/interfaces
+# interfaces(5) file used by ifup(8) and ifdown(8)
+
+# Please note that this file is written to be used with dhcpcd
+# For static IP, consult /etc/dhcpcd.conf and 'man dhcpcd.conf'
+
+# Include files from /etc/network/interfaces.d:
+source-directory /etc/network/interfaces.d
+
+auto lo
+iface lo inet loopback
+
+auto eth0
+allow-hotplug eth0
+iface eth0 inet static
+    address 10.0.0.2/24
+    gateway 10.0.0.1
+    dns-nameservers 8.8.8.8 4.4.4.4
+EOF
+
+sync
+sync
+
+umount $mnt
+
+echo Done
