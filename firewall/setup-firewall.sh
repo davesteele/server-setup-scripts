@@ -37,7 +37,7 @@ done
 
 for PORT in $UDPPORTS ; do
     if ! iptables -C INPUT -i $EXTINT -p UDP --destination-port $PORT -j ACCEPT; then
-        iptables -C INPUT -i $EXTINT -p UDP --destination-port $PORT -j ACCEPT;
+        iptables -A INPUT -i $EXTINT -p UDP --destination-port $PORT -j ACCEPT;
     fi
 done
 
